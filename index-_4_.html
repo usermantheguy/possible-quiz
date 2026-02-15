@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>possible quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Courier Prime', monospace;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            overflow-x: hidden;
+        }
+        @keyframes tilt {
+            0%, 100% { transform: rotate(-3deg); }
+            50% { transform: rotate(3deg); }
+        }
+        .animate-tilt { animation: tilt 4s infinite ease-in-out; }
+        
+        .falling-bg { animation: fall 1.5s forwards ease-in; }
+        @keyframes fall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(20deg); opacity: 0; }
+        }
+
+        .shatter-char {
+            display: inline-block;
+            animation: shatter 0.8s forwards ease-out;
+            position: relative;
+        }
+        @keyframes shatter {
+            0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) rotate(var(--tr)); opacity: 0; }
+        }
+
+        .hidden-view { display: none !important; }
+        .settings-overlay {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+        }
+        .option-btn:active { transform: scale(0.98); }
+        .clickable-word { cursor: pointer; transition: color 0.2s; }
+        .clickable-word:hover { color: #22c55e; text-decoration: underline; }
+        .clickable-char { cursor: pointer; transition: opacity 0.2s; }
+        .clickable-char:hover { opacity: 0.6; text-decoration: underline; }
+        
+        .quiz-input {
+            border: none;
+            border-bottom: 2px solid #e5e7eb;
+            outline: none;
+            width: 100%;
+            padding: 4px;
+            background: transparent;
+        }
+        .quiz-input:focus { border-bottom-color: #22c55e; }
+
+        .bad-screen {
+            background-color: #ffff00 !important;
+            border: 10px dashed #ff00ff !important;
+            color: #ff0000 !important;
+            font-family: "Comic Sans MS", "Comic Sans", cursive !important;
+        }
+
+        /* BLUE MODE EYESORE */
+        .blue-mode-menu {
+            background-color: #0000FF !important;
+            background-image: repeating-linear-gradient(45deg, #0000FF, #0000FF 10px, #00FFFF 10px, #00FFFF 20px) !important;
+        }
+        .blue-mode-menu h1 {
+            color: #FF00FF !important;
+            font-family: "Impact", sans-serif !important;
+            font-size: 150px !important;
+            transform: skew(20deg) !important;
+            text-shadow: 5px 5px 0px #FFFF00 !important;
+        }
+        .blue-mode-menu .menu-btn {
+            background: #00FF00 !important;
+            color: #000000 !important;
+            font-family: "Webdings" !important;
+            font-size: 8px !important;
+            border: 20px ridge #FFFFFF !important;
+            width: 50% !important;
+        }
+
+        .cheat-menu {
+            background: #ef4444;
+            color: white;
+            border: 4px solid black;
+        }
+        .logo-reset-btn {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .logo-reset-btn:hover { color: #22c55e; }
+        
+        .draggable-text {
+            cursor: grab;
+            color: #22c55e;
+            font-weight: bold;
+            text-decoration: underline;
+            user-select: none;
+            display: inline-block;
+            touch-action: none;
+        }
+        
+        #pickaxe {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            font-size: 2rem;
+            cursor: grab;
+            z-index: 2000;
+            user-select: none;
+            touch-action: none;
+        }
+
+        #dragGhost {
+            position: fixed;
+            pointer-events: none;
+            z-index: 2001;
+            opacity: 0.8;
+            font-weight: bold;
+            color: #22c55e;
+            display: none;
+        }
+
+        .dropping-num {
+            position: fixed;
+            pointer-events: auto;
+            cursor: pointer;
+            font-weight: bold;
+            color: #22c55e;
+            z-index: 3000;
+            font-size: 1.5rem;
+            user-select: none;
+            transition: transform 0.1s linear;
+        }
+        
+        .color-box {
+            width: 120px;
+            height: 120px;
+            border: 2px solid #eee;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background-color 0.1s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            position: relative;
+        }
+        .inline-num-input {
+            width: 40px;
+            border-bottom: 1px solid black;
+            text-align: center;
+            outline: none;
+        }
+    </style>
+</head>
+<body class="bg-[#fcfcfc] text-slate-800 min-h-screen">
+
+    <div id="dragGhost"></div>
+    <div id="pickaxe" class="hidden-view" ontouchstart="handleTouchStart(event, 'pickaxe')" ontouchmove="handleTouchMove(event)" ontouchend="handleTouchEnd(event)" onmousedown="pickaxeMouseDown(event)">⛏️</div>
+
+    <button id="settingsToggle" onclick="toggleSettings(true)" class="fixed top-8 left-8 p-2 rounded-full hover:bg-gray-100/20 transition-colors z-[150]">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 group-hover:text-white"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+
+    <div id="settingsMenu" class="fixed inset-0 z-[200] hidden-view flex items-start justify-start settings-overlay">
+        <div class="bg-white h-full w-72 shadow-2xl p-10 flex flex-col animate-in slide-in-from-left duration-300">
+            <div class="flex justify-between items-center mb-16">
+                <h2 class="text-2xl font-bold tracking-tighter text-slate-800">
+                    <span id="triggerS" onclick="startQuiz()" class="hover:text-green-500 cursor-pointer transition-colors">S</span><span id="triggerE" onclick="goToNextPhase()" class="transition-colors cursor-pointer hover:text-red-500">e</span><span id="triggerT" class="transition-colors">t</span><span id="triggerT2" class="transition-colors">t</span>ings
+                </h2>
+                <button onclick="toggleSettings(false)" class="text-gray-300 hover:text-gray-600 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </div>
+            <div class="space-y-6 text-sm text-gray-400">
+                <div class="border-b border-gray-50 pb-3">Volume: 100%</div>
+                <div id="cheatSettingContainer" onclick="cycleCheat()" class="border-b border-gray-50 pb-3 transition-colors">Cheat Detection: <span id="cheatStatus">High</span></div>
+                <div class="border-b border-gray-50 pb-3">Logic: Experimental</div>
+                <div id="settingsHint" class="mt-auto pt-20 italic text-[10px] opacity-60">
+                    If you can't start, you aren't looking closely enough.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="cheatWindow" class="fixed inset-0 z-[250] hidden-view flex items-center justify-center bg-black/50 p-4">
+        <div class="cheat-menu w-full max-w-xs p-6 flex flex-col gap-4 shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]">
+            <div class="flex justify-between items-center border-b-2 border-black pb-2 mb-2">
+                <span class="font-bold uppercase italic">CHEAT_CONSOLE.exe</span>
+                <button onclick="document.getElementById('cheatWindow').classList.add('hidden-view')" class="text-black font-bold">X</button>
+            </div>
+            <button class="bg-white text-black p-2 border-2 border-black hover:bg-black hover:text-white transition-colors">Enable God Mode (Disabled)</button>
+            <button onclick="skipStage()" class="bg-yellow-400 text-black p-4 border-2 border-black font-bold hover:bg-white transition-colors">SKIP STAGE</button>
+        </div>
+    </div>
+
+    <div id="gameMenuView" class="fixed inset-0 bg-[#1a1a1a] z-[100] hidden-view flex flex-col items-center justify-center p-8 space-y-12">
+        <div class="text-center space-y-4">
+            <h1 id="menuMainTitle" class="text-6xl font-black text-white italic tracking-tighter uppercase drop-shadow-[0_5px_0px_#22c55e]">THE POSSIBLE GAME</h1>
+            <p id="menuSubtext" class="text-green-500 font-bold tracking-[1em] text-sm">MAIN MENU VERSION 1.0.4</p>
+        </div>
+        <div id="mainButtonsContainer" class="flex flex-col w-full max-w-sm gap-4">
+            <button onclick="explodeGameBtn(this)" class="menu-btn bg-green-500 text-white py-4 px-12 rounded-lg font-black text-2xl uppercase border-b-8 border-green-700 active:border-b-0 active:translate-y-2 transition-all">New Campaign</button>
+            <button onclick="explodeGameBtn(this)" class="menu-btn bg-white text-black py-4 px-12 rounded-lg font-black text-2xl uppercase border-b-8 border-gray-300 active:border-b-0 active:translate-y-2 transition-all">Level Select</button>
+            <button onclick="explodeGameBtn(this)" class="menu-btn bg-red-500 text-white py-4 px-12 rounded-lg font-black text-2xl uppercase border-b-8 border-red-700 active:border-b-0 active:translate-y-2 transition-all">Quit Reality</button>
+        </div>
+        <!-- Secret Button -->
+        <button id="blueModeBtn" onclick="enableBlueMode()" class="hidden-view absolute bottom-10 right-10 text-[10px] text-white/40 border border-white/20 px-2 py-1 rounded hover:bg-white hover:text-black transition-all uppercase z-[110]">blue mode</button>
+    </div>
+
+    <main class="min-h-screen flex flex-col items-center justify-center p-6 py-20">
+        <div id="logoHeader" class="text-center mb-16 space-y-1">
+            <h1 class="text-5xl font-light tracking-widest lowercase opacity-80">
+                <span id="pTrigger" onclick="openCheatMenu()" class="transition-colors">p</span>ossibl<span id="resetTrigger" onclick="resetCurrentQuestion()" class="logo-reset-btn">e</span>
+            </h1>
+            <p class="text-xl tracking-[0.4em] uppercase opacity-40">
+                qui<span id="zTrigger" onclick="handleZClick()" class="cursor-pointer hover:text-green-500 transition-colors">z</span>
+            </p>
+            <p class="text-[10px] tracking-widest italic opacity-30">maybe</p>
+            <p id="maybeIsIs" onclick="this.innerText='yes'" class="text-[6px] tracking-[0.2em] opacity-20 lowercase cursor-pointer hover:opacity-100 transition-opacity">or is it?</p>
+        </div>
+
+        <div id="landingView" class="flex flex-col items-center space-y-8">
+            <div class="relative">
+                <div id="btnBackground" class="absolute inset-0 bg-green-500 rounded-3xl shadow-xl transition-all" style="z-index: 0;"></div>
+                <button id="fakeStartBtn" onclick="growText()" class="relative z-10 text-white px-14 py-8 rounded-3xl transition-all animate-tilt active:scale-95 group bg-transparent">
+                    <span id="startTextContainer" class="block font-bold text-3xl uppercase tracking-tighter">Start</span>
+                    <span id="subTextContainer" class="block text-[9px] opacity-70 mt-1 uppercase tracking-widest">growing the text</span>
+                </button>
+            </div>
+            <p id="lieText" onclick="this.innerText = '🧠'" class="text-[10px] text-gray-300 uppercase tracking-[0.3em] mt-12 cursor-pointer transition-all hover:text-gray-400">The button is a lie</p>
+        </div>
+
+        <div id="quizView" class="hidden-view w-full max-w-md space-y-8">
+            <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+                <p id="qCount" class="text-[10px] text-gray-300 uppercase mb-2">Question 1 of 3</p>
+                <h3 id="qText" class="text-xl font-medium leading-relaxed">Loading question...</h3>
+            </div>
+            <div id="optionsContainer" class="space-y-3 pb-10"></div>
+        </div>
+
+        <div id="resultView" class="hidden-view text-center space-y-6">
+            <div id="resultCard" class="bg-white p-12 rounded-[3rem] shadow-sm border border-gray-100 transition-all duration-500">
+                <h2 id="resultHeading" class="text-3xl font-light mb-2">Impossible.</h2>
+                <p id="finalScore" class="text-gray-400 mb-8">You survived 0 questions.</p>
+                <button onclick="location.reload()" class="text-[10px] uppercase tracking-widest text-gray-400 hover:text-black transition-colors border-b border-gray-200">Reset Reality</button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentScale = 1, currentQuestion = 0, score = 0, q2TypedWord = "", isPhaseTwo = false, isPhaseThree = false;
+        let phaseOneCompleted = false, phaseTwoCompleted = false, startClickCount = 0, cheatLevel = 2;
+        let questionOffset = 0, q3Clicks = 0, q3Locked = false, pickaxeMinedCount = 0;
+        let currentDragType = null, atomsLoopCompleted = false;
+        let zClicks = 0, zIsInteger = false;
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSynth(freq, type, duration, vol) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            g.gain.setValueAtTime(vol, audioCtx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+            osc.connect(g); g.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + duration);
+        }
+
+        const sound = {
+            click: () => playSynth(600, 'sine', 0.1, 0.1),
+            success: () => { playSynth(800, 'sine', 0.1, 0.1); setTimeout(() => playSynth(1200, 'sine', 0.2, 0.1), 50); },
+            fail: () => playSynth(150, 'sawtooth', 0.4, 0.1),
+            mine: () => playSynth(300, 'square', 0.05, 0.1),
+            pop: () => playSynth(1000, 'sine', 0.05, 0.05),
+            explosion: () => {
+                const bufferSize = audioCtx.sampleRate * 0.8;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                const noise = audioCtx.createBufferSource(); noise.buffer = buffer;
+                const g = audioCtx.createGain();
+                g.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+                noise.connect(g); g.connect(audioCtx.destination);
+                noise.start();
+            }
+        };
+
+        const questionsPhaseOne = [
+            { q: "Which of these is the correct spelling of <span onclick='handleAnswer(-1)' class='clickable-word underline decoration-green-500'>the</span>?", options: ["Teh", "Thee", "thE", "tHe", "T-H-E", "Thy", "Them", "They", "Tea", "Tee"], answer: -1 },
+            { q: "Fill in the <span onclick='typeChar(\"b\")' class='clickable-char'>b</span>lank: This <span onclick='typeChar(\"l\")' class='clickable-char'>l</span>ovely <span onclick='typeChar(\"a\")' class='clickable-char'>a</span>nd <span onclick='typeChar(\"c\")' class='clickable-char'>c</span>ompletely <span onclick='typeChar(\"k\")' class='clickable-char'>k</span>ind sentence needs a color.", options: ["White", "Red", "Blue", ""], answer: 3 },
+            { q: "Placeholder for Question 3. I'll think of it later.", options: ["bro", "Textbox", "stop lazing about", "think harder"], answer: 1 }
+        ];
+
+        const questionsPhaseTwo = [
+            { q: "If John didn't not wouldn't shouldn't not didn't not have not done nothing, did he not not do it?", options: ["True", "False"], answer: -99 },
+            { q: "Is this question 6?", options: ["Yes", "No, it's question "], answer: [0, 1] },
+            { q: 'Do you really wish to end what you have <span id="dragMe" class="draggable-text" ontouchstart="handleTouchStart(event, \'start\')" ontouchmove="handleTouchMove(event)" ontouchend="handleTouchEnd(event)" draggable="true" ondragstart="handleDragStart(event, \'start\')">started</span>?', options: [], answer: -1 }
+        ];
+
+        const questionsPhaseThree = [
+            { q: 'Do you wish to co<span id="dragN" class="draggable-text" ontouchstart="handleTouchStart(event, \'n\')" ontouchmove="handleTouchMove(event)" ontouchend="handleTouchEnd(event)" draggable="true" ondragstart="handleDragStart(event, \'n\')">n</span>tinue?', options: ["No!", "Not really.", 'no-way-opt', "Nope."], answer: -1 },
+            { q: "1 + 1 = ?", options: ["20 / 2 + (4 * 3) - 5 + 6 - 8 + 2 * 9 / 3 - 1", "5 * (10 + 2) / 4 - 3 + 12 - 9 + (2 * 5) - 6 + 1", "(8 * 8) / 2 + 10 - 5 * 2 + 3 - 4 + 6 / 2 + 15", "100 / 10 + 2 * 5 - 3 + 4 - 2 + (6 * 2) / 3 - 5"], answer: -100 },
+            { q: "What did you touch today?", options: ["Something"], answer: 0 }
+        ];
+
+        let activeQuestions = questionsPhaseOne;
+
+        function updateCheatUI() {
+            const statusLabel = document.getElementById('cheatStatus');
+            const p = document.getElementById('pTrigger');
+            if(statusLabel) statusLabel.innerText = ["None", "High", "Extreme"][cheatLevel];
+            if (cheatLevel === 0) p.classList.add('text-red-500'); else p.classList.remove('text-red-500');
+        }
+
+        function toggleSettings(open) {
+            const menu = document.getElementById('settingsMenu');
+            if (open) menu.classList.remove('hidden-view'); else menu.classList.add('hidden-view');
+        }
+
+        function growText() {
+            startClickCount++;
+            if (startClickCount === 10) {
+                sound.explosion();
+                document.getElementById('btnBackground').classList.add('falling-bg');
+                document.getElementById('startTextContainer').innerHTML = shatterString("START", (currentScale * 1.5) + 'rem');
+                document.getElementById('subTextContainer').innerHTML = shatterString("growing the text", '9px');
+                document.getElementById('pickaxe').classList.remove('hidden-view');
+                setTimeout(() => { document.getElementById('fakeStartBtn').style.display = 'none'; }, 1400);
+            } else if (startClickCount < 10) {
+                sound.click(); currentScale += 0.2;
+                document.getElementById('startTextContainer').style.fontSize = (currentScale * 1.5) + 'rem';
+            }
+        }
+
+        function shatterString(str, fontSize) {
+            return str.split('').map(char => {
+                const tx = (Math.random() - 0.5) * 400 + 'px', ty = (Math.random() - 0.5) * 400 + 'px', tr = (Math.random() - 0.5) * 720 + 'deg';
+                return `<span class="shatter-char" style="--tx:${tx}; --ty:${ty}; --tr:${tr}; font-size: ${fontSize}">${char === ' ' ? '&nbsp;' : char}</span>`;
+            }).join('');
+        }
+
+        function pickaxeMouseDown(e) {
+            currentDragType = 'pickaxe';
+            const move = (me) => {
+                const p = document.getElementById('pickaxe');
+                p.style.left = (me.clientX - 20) + 'px'; p.style.top = (me.clientY - 20) + 'px'; p.style.right = 'auto';
+                checkMiningCollision();
+            };
+            const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); currentDragType = null; };
+            window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
+        }
+
+        function handleDragStart(e, type) { e.dataTransfer.setData('text/plain', type); currentDragType = type; }
+        function handleTouchStart(e, type) { 
+            currentDragType = type;
+            const ghost = document.getElementById('dragGhost');
+            ghost.style.display = 'block';
+            ghost.innerText = type === 'pickaxe' ? '⛏️' : (type === 'start' ? 'started' : (type === 'n' ? 'n' : ''));
+            updateGhostPos(e.touches[0]);
+        }
+        function handleTouchMove(e) { 
+            if (currentDragType) {
+                e.preventDefault(); 
+                updateGhostPos(e.touches[0]);
+                if (currentDragType === 'pickaxe') {
+                    const p = document.getElementById('pickaxe');
+                    p.style.left = (e.touches[0].clientX - 20) + 'px'; p.style.top = (e.touches[0].clientY - 20) + 'px';
+                    checkMiningCollision();
+                }
+            }
+        }
+        function handleTouchEnd(e) {
+            const ghost = document.getElementById('dragGhost'); ghost.style.display = 'none';
+            const touch = e.changedTouches[0];
+            const x = touch.clientX; const y = touch.clientY;
+
+            if (currentDragType === 'start') {
+                const box = document.getElementById('colorBox');
+                if (box) { const r = box.getBoundingClientRect(); if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) finalizeStartDrop(); }
+            } else if (currentDragType === 'n') {
+                const targetW = document.getElementById('way-target');
+                if (targetW) { const r = targetW.getBoundingClientRect(); if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) finalizeNDrop(); }
+            }
+            if (currentDragType !== 'pickaxe') currentDragType = null;
+        }
+
+        function updateGhostPos(t) { 
+            const g = document.getElementById('dragGhost'); g.style.left = (t.clientX - 20) + 'px'; g.style.top = (t.clientY - 10) + 'px'; 
+        }
+
+        function handleZClick() {
+            if (!isPhaseThree || currentQuestion === 0) { sound.click(); return; }
+            if (!zIsInteger) {
+                zClicks++;
+                sound.click();
+                if (zClicks >= 10) {
+                    zIsInteger = true;
+                    document.getElementById('zTrigger').innerText = 'ℤ';
+                    document.getElementById('zTrigger').classList.add('text-green-600', 'scale-125');
+                    sound.success();
+                }
+            } else {
+                spawnInteger();
+            }
+        }
+
+        function spawnInteger() {
+            sound.pop();
+            const num = Math.floor(Math.random() * 21) - 10;
+            const el = document.createElement('div');
+            el.className = 'dropping-num';
+            el.innerText = num;
+            
+            const zRect = document.getElementById('zTrigger').getBoundingClientRect();
+            let x = zRect.left + (Math.random() * 20 - 10);
+            let y = zRect.top;
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            document.body.appendChild(el);
+
+            let velocity = 0;
+            const gravity = 0.5;
+            let landed = false;
+
+            function animateFall() {
+                if (landed) return;
+                velocity += gravity;
+                y += velocity;
+                
+                let targetId = (currentQuestion === 1) ? 'math-target' : (currentQuestion === 2 ? 'something-target' : null);
+                if (targetId) {
+                    const target = document.getElementById(targetId);
+                    if (target) {
+                        const tr = target.getBoundingClientRect();
+                        if (y + 24 >= tr.top && x + 12 >= tr.left && x <= tr.right) {
+                            landed = true;
+                            y = tr.top - 20;
+                            el.style.top = y + 'px';
+                            if (num === 2 && currentQuestion === 1) {
+                                sound.success();
+                                setTimeout(() => { el.remove(); handleAnswer(-100); }, 500);
+                            } else if (num === 0 && currentQuestion === 2) {
+                                sound.success();
+                                setTimeout(() => { el.remove(); atomsLoopReset(); }, 500);
+                            } else {
+                                sound.fail();
+                                setTimeout(() => el.remove(), 1000);
+                            }
+                            return;
+                        }
+                    }
+                }
+
+                if (y > window.innerHeight) { el.remove(); return; }
+                el.style.top = y + 'px';
+                requestAnimationFrame(animateFall);
+            }
+            requestAnimationFrame(animateFall);
+        }
+
+        function atomsLoopReset() {
+            atomsLoopCompleted = true;
+            sound.explosion();
+            isPhaseTwo = false;
+            isPhaseThree = false;
+            phaseOneCompleted = false;
+            phaseTwoCompleted = false;
+            currentQuestion = 0;
+            score = 0;
+            startClickCount = 0;
+            currentScale = 1;
+            zIsInteger = false;
+            zClicks = 0;
+            pickaxeMinedCount = 0;
+            q2TypedWord = "";
+            q3Clicks = 0;
+            q3Locked = false;
+            
+            const fakeBtn = document.getElementById('fakeStartBtn');
+            fakeBtn.style.display = 'block';
+            fakeBtn.style.fontSize = '1.5rem';
+            document.getElementById('startTextContainer').innerText = "Start";
+            document.getElementById('startTextContainer').style.fontSize = "1.5rem";
+            document.getElementById('subTextContainer').innerText = "growing the text";
+            document.getElementById('btnBackground').classList.remove('falling-bg');
+            document.getElementById('pickaxe').classList.add('hidden-view');
+            document.getElementById('zTrigger').innerText = 'z';
+            document.getElementById('zTrigger').classList.remove('text-green-600', 'scale-125');
+            document.getElementById('lieText').innerText = 'The button is a lie';
+            document.getElementById('maybeIsIs').innerText = 'or is it?';
+            
+            document.getElementById('quizView').classList.add('hidden-view');
+            document.getElementById('landingView').classList.remove('hidden-view');
+            document.getElementById('triggerT').dataset.mined = '';
+            document.getElementById('triggerT').classList.remove('text-green-500', 'font-bold');
+            document.getElementById('triggerT2').dataset.mined = '';
+            document.getElementById('triggerT2').classList.remove('text-green-500', 'font-bold');
+
+            // Restore Main Menu button state for the second run
+            restoreMainMenu();
+            document.getElementById('blueModeBtn').classList.remove('hidden-view');
+        }
+
+        function restoreMainMenu() {
+            const container = document.getElementById('mainButtonsContainer');
+            container.innerHTML = `
+                <button onclick="explodeGameBtn(this)" class="menu-btn bg-green-500 text-white py-4 px-12 rounded-lg font-black text-2xl uppercase border-b-8 border-green-700 active:border-b-0 active:translate-y-2 transition-all">New Campaign</button>
+                <button onclick="explodeGameBtn(this)" class="menu-btn bg-white text-black py-4 px-12 rounded-lg font-black text-2xl uppercase border-b-8 border-gray-300 active:border-b-0 active:translate-y-2 transition-all">Level Select</button>
+                <button onclick="explodeGameBtn(this)" class="menu-btn bg-red-500 text-white py-4 px-12 rounded-lg font-black text-2xl uppercase border-b-8 border-red-700 active:border-b-0 active:translate-y-2 transition-all">Quit Reality</button>
+            `;
+            const menu = document.getElementById('gameMenuView');
+            menu.classList.remove('blue-mode-menu');
+            document.getElementById('menuMainTitle').innerText = "THE POSSIBLE GAME";
+            document.getElementById('menuSubtext').innerText = "MAIN MENU VERSION 1.0.4";
+        }
+
+        function enableBlueMode() {
+            sound.explosion();
+            document.getElementById('gameMenuView').classList.add('blue-mode-menu');
+            document.getElementById('menuMainTitle').innerText = "SYSTEM CRITICAL";
+            document.getElementById('menuSubtext').innerText = "ERROR_BAD_UI_DESIGN_1998";
+            document.getElementById('blueModeBtn').classList.add('hidden-view');
+        }
+
+        function finalizeStartDrop() {
+            if (!q3Locked) return;
+            sound.success();
+            document.getElementById('colorBox').innerHTML = `<button onclick="handleAnswer(0)" class="bg-white/20 text-white font-bold px-4 py-2 rounded-lg border-2 border-white animate-pulse">Start</button>`;
+        }
+
+        function finalizeNDrop() {
+            const noSpan = document.getElementById('no-span');
+            if (noSpan && noSpan.style.display !== 'none') return;
+            sound.success();
+            const btn = document.getElementById('way-btn');
+            btn.innerHTML = `<span class="text-green-600 font-bold">nay.</span>`;
+            btn.onclick = (e) => { e.stopPropagation(); handleAnswer(-1); };
+        }
+
+        function checkMiningCollision() {
+            if (document.getElementById('gameMenuView').classList.contains('hidden-view')) return;
+            const pRect = document.getElementById('pickaxe').getBoundingClientRect();
+            ['triggerT', 'triggerT2'].forEach(id => {
+                const t = document.getElementById(id); const tRect = t.getBoundingClientRect();
+                if (pRect.left < tRect.right && pRect.right > tRect.left && pRect.top < tRect.bottom && pRect.bottom > tRect.top) {
+                    if (!t.dataset.mined) {
+                        t.dataset.mined = true; t.classList.add('text-green-500', 'font-bold');
+                        sound.mine(); pickaxeMinedCount++;
+                        if (pickaxeMinedCount >= 2) {
+                            document.getElementById('pickaxe').classList.add('hidden-view');
+                            setTimeout(goToPhaseThree, 500);
+                        }
+                    }
+                }
+            });
+        }
+
+        function startQuiz() {
+            if (phaseOneCompleted) return;
+            toggleSettings(false); activeQuestions = questionsPhaseOne; currentQuestion = 0; score = 0;
+            document.getElementById('landingView').classList.add('hidden-view');
+            document.getElementById('quizView').classList.remove('hidden-view');
+            loadQuestion();
+        }
+
+        function goToNextPhase() {
+            if (!phaseOneCompleted || phaseTwoCompleted) return;
+            toggleSettings(false); isPhaseTwo = true; activeQuestions = questionsPhaseTwo; currentQuestion = 0; score = 0;
+            document.getElementById('resultView').classList.add('hidden-view');
+            document.getElementById('resultCard').classList.remove('bad-screen');
+            document.getElementById('landingView').classList.add('hidden-view');
+            document.getElementById('quizView').classList.remove('hidden-view');
+            loadQuestion();
+        }
+
+        function goToPhaseThree() {
+            toggleSettings(false); document.getElementById('gameMenuView').classList.add('hidden-view');
+            isPhaseThree = true; activeQuestions = questionsPhaseThree; currentQuestion = 0; score = 0;
+            document.getElementById('quizView').classList.remove('hidden-view');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const q = activeQuestions[currentQuestion];
+            let offset = isPhaseThree ? 6 : (isPhaseTwo ? 3 : 0);
+            document.getElementById('qCount').innerText = `Question ${currentQuestion + 1 + offset + questionOffset} of 9`;
+            document.getElementById('qText').innerHTML = q.q;
+            const container = document.getElementById('optionsContainer'); container.innerHTML = '';
+            
+            if (isPhaseTwo && currentQuestion === 2 && !isPhaseThree) {
+                const box = document.createElement('div');
+                box.id = 'colorBox'; box.className = 'color-box'; 
+                box.style.backgroundColor = '#f3f4f6';
+                box.onclick = handleBoxClick; box.ondragover = (e) => e.preventDefault();
+                box.ondrop = (e) => { e.preventDefault(); if(e.dataTransfer.getData('text/plain') === 'start') finalizeStartDrop(); };
+                container.appendChild(box);
+            } else {
+                let options = [...q.options];
+                if (isPhaseThree && currentQuestion === 2 && atomsLoopCompleted) {
+                    options.push("Nothing");
+                }
+
+                options.forEach((opt, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'option-btn w-full text-left p-6 bg-white border border-gray-100 rounded-2xl hover:border-green-500 hover:bg-green-50/20 transition-all flex justify-between items-center group';
+                    
+                    if (!isPhaseTwo && currentQuestion === 2 && idx === 1) {
+                        btn.innerHTML = `<div class="flex-1 mr-4"><input type="text" placeholder="Type here..." class="quiz-input" onclick="event.stopPropagation()" oninput="checkQ3Input(this)"></div>`;
+                    } else if (isPhaseTwo && currentQuestion === 1 && idx === 1 && !isPhaseThree) {
+                        btn.innerHTML = `<span class="text-gray-600">${opt} <input id="q2NumInput" type="text" class="inline-num-input" onclick="event.stopPropagation()"></span>`;
+                        btn.onclick = () => handleAnswer(idx);
+                    } else if (isPhaseThree && currentQuestion === 0 && opt === 'no-way-opt') {
+                        btn.id = 'way-btn';
+                        btn.innerHTML = `
+                            <span class="text-gray-600 relative flex items-center h-full w-full">
+                                <span id="no-span" onclick="event.stopPropagation(); this.style.display='none'; sound.pop();" class="mr-2 cursor-pointer hover:text-red-500 px-8 py-4 -m-4 bg-transparent">No</span>
+                                <span id="way-target" class="flex items-center p-4 -m-4 min-w-[120px]" ondragover="event.preventDefault()" ondrop="event.preventDefault(); if(currentDragType==='n') finalizeNDrop();">way.</span>
+                            </span>`;
+                        btn.onclick = () => handleAnswer(idx);
+                    } else {
+                        if (isPhaseThree && currentQuestion === 1 && idx === 0) btn.id = 'math-target';
+                        if (isPhaseThree && currentQuestion === 2 && idx === 0) btn.id = 'something-target';
+                        
+                        btn.innerHTML = `<span>${opt === "" ? q2TypedWord : opt}</span>`;
+                        btn.onclick = () => handleAnswer(idx);
+                    }
+                    container.appendChild(btn);
+                });
+            }
+        }
+
+        function handleAnswer(idx) {
+            const q = activeQuestions[currentQuestion]; let isCorrect = false;
+            if (isPhaseThree) {
+                if (currentQuestion === 0) isCorrect = (idx === -1);
+                else if (currentQuestion === 1) isCorrect = (idx === -100);
+                else if (currentQuestion === 2) isCorrect = (atomsLoopCompleted && idx === 1);
+            } else if (!isPhaseTwo) {
+                if (currentQuestion === 0) isCorrect = (idx === -1);
+                else if (currentQuestion === 1) isCorrect = (idx === 3 && q2TypedWord.toLowerCase() === "black");
+                else if (currentQuestion === 2) isCorrect = (idx === 1);
+            } else {
+                if (currentQuestion === 1) {
+                    isCorrect = true;
+                    if (idx === 1) {
+                        const val = document.getElementById('q2NumInput').value;
+                        const num = parseInt(val);
+                        if (!isNaN(num)) questionOffset = num - 5;
+                    }
+                } else if (currentQuestion === 2) isCorrect = true;
+                else isCorrect = (idx === q.answer);
+            }
+
+            if (isCorrect) {
+                sound.success(); score++;
+                if (currentQuestion < activeQuestions.length - 1) { currentQuestion++; loadQuestion(); }
+                else showResult(true);
+            } else { sound.fail(); showResult(false); }
+        }
+
+        function showResult(success) {
+            document.getElementById('quizView').classList.add('hidden-view');
+            if (success) {
+                if (isPhaseThree) {
+                    const rView = document.getElementById('resultView');
+                    rView.classList.remove('hidden-view');
+                    document.getElementById('resultHeading').innerText = "You win.";
+                    document.getElementById('finalScore').innerText = "Atoms never touch, but you touched the end. God speed, soldier.";
+                } else if (!isPhaseTwo) {
+                    phaseOneCompleted = true;
+                    document.getElementById('resultView').classList.remove('hidden-view');
+                    document.getElementById('resultHeading').innerText = "YOU WIN!!1!";
+                    document.getElementById('finalScore').innerText = `score: ${score}/3`;
+                    document.getElementById('resultCard').classList.add('bad-screen');
+                } else {
+                    phaseTwoCompleted = true;
+                    document.getElementById('gameMenuView').classList.remove('hidden-view');
+                }
+            } else location.reload();
+        }
+
+        function handleBoxClick() {
+            if (q3Locked) return; sound.click(); q3Clicks++;
+            if (q3Clicks >= 42) {
+                q3Locked = true; this.style.backgroundColor = '#22c55e';
+                this.innerHTML = '<span class="text-[10px] opacity-20">Locked</span>';
+            } else this.style.backgroundColor = ['#f87171', '#60a5fa', '#fbbf24', '#a78bfa'][q3Clicks % 4];
+        }
+
+        function explodeGameBtn(btn) {
+            sound.explosion();
+            const text = btn.innerText;
+            btn.style.pointerEvents = 'none'; btn.style.backgroundColor = 'transparent'; btn.style.border = 'none'; btn.style.color = 'transparent';
+            btn.innerHTML = text.split('').map(char => {
+                const tx = (Math.random() - 0.5) * 800 + 'px', ty = (Math.random() - 0.5) * 800 + 'px', tr = (Math.random() - 0.5) * 1000 + 'deg';
+                return `<span class="shatter-char absolute inset-0 flex items-center justify-center" style="--tx:${tx}; --ty:${ty}; --tr:${tr}; color: white; font-size: 1.5rem">${char}</span>`;
+            }).join('');
+        }
+
+        function typeChar(c) { 
+            if (currentQuestion === 1 && !isPhaseTwo) { 
+                q2TypedWord += c; 
+                const span = document.querySelector('#optionsContainer button:last-child span'); 
+                if (span) span.innerText = q2TypedWord; 
+            } 
+        }
+        function checkQ3Input(el) { if (el.value.trim() === "🧠") handleAnswer(1); }
+        function openCheatMenu() { if (cheatLevel === 0) document.getElementById('cheatWindow').classList.remove('hidden-view'); }
+        function cycleCheat() { if (isPhaseTwo && currentQuestion === 0) { cheatLevel = (cheatLevel + 1) % 3; updateCheatUI(); } }
+        
+        function resetCurrentQuestion() { 
+            sound.click(); 
+            if (!isPhaseTwo && currentQuestion === 1) {
+                q2TypedWord = ""; 
+                const span = document.querySelector('#optionsContainer button:last-child span');
+                if (span) span.innerText = "";
+            } else {
+                loadQuestion();
+            }
+        }
+        
+        function skipStage() { 
+            sound.success(); 
+            score++; 
+            currentQuestion++; 
+            cheatLevel = 2; 
+            updateCheatUI();
+            if (currentQuestion >= 3) showResult(true); 
+            else loadQuestion(); 
+            document.getElementById('cheatWindow').classList.add('hidden-view'); 
+        }
+        
+        updateCheatUI();
+    </script>
+</body>
+</html>
